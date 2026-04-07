@@ -1,0 +1,1380 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="פיננסי">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a0b14">
+<title>לוח בקרה פיננסי</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700;800&display=swap">
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{height:100%;overflow-x:hidden}
+body{font-family:'Rubik','Segoe UI',sans-serif;background:#0a0b14;min-height:100%;direction:rtl;color:#e2e8f0;-webkit-font-smoothing:antialiased;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);overflow-x:hidden}
+::-webkit-scrollbar{width:0;display:none}
+.bg{position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse 80% 50% at 50% -20%,rgba(99,102,241,.12),transparent),radial-gradient(ellipse 60% 40% at 80% 100%,rgba(244,114,182,.08),transparent),linear-gradient(160deg,#0a0b14,#111327 50%,#0a0b14);pointer-events:none}
+.app{position:relative;z-index:1;max-width:800px;margin:0 auto;padding:16px 14px;padding-bottom:90px}
+.hidden{display:none!important}
+
+/* Header */
+.hdr{margin-bottom:20px}
+.hdr h1{font-size:24px;font-weight:800;background:linear-gradient(135deg,#818cf8,#c084fc,#f472b6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hdr .sub{color:#475569;font-size:12px;margin-top:4px}
+
+/* Month scroller */
+.mscroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -14px 18px;padding:0 14px;scrollbar-width:none}
+.mscroll::-webkit-scrollbar{display:none}
+.mtabs{display:flex;gap:6px;width:max-content}
+.mt{padding:8px 16px;border-radius:12px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.03);color:#64748b;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;font-family:inherit;white-space:nowrap}
+.mt:active{transform:scale(.95)}
+.mt.on{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border-color:transparent;box-shadow:0 4px 16px rgba(99,102,241,.4);font-weight:600}
+
+/* Bottom nav */
+.bnav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,11,20,.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-around;align-items:center;padding:8px 0;padding-bottom:calc(8px + env(safe-area-inset-bottom))}
+.bni{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 16px;border-radius:12px;cursor:pointer;transition:all .2s;border:none;background:transparent;font-family:inherit}
+.bni:active{transform:scale(.9)}
+.bni .bi{font-size:22px}
+.bni .bl{font-size:10px;color:#475569;font-weight:500}
+.bni.on .bl{color:#818cf8}
+.bni.on{background:rgba(99,102,241,.1)}
+
+/* Cards */
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+@media(max-width:380px){.cgrid{grid-template-columns:1fr}}
+.sc{background:linear-gradient(145deg,rgba(22,24,40,.95),rgba(14,16,28,.98));border:1px solid rgba(255,255,255,.05);border-radius:18px;padding:16px;position:relative;overflow:hidden;transition:all .2s}
+.sc:active{transform:scale(.97)}
+.sc .bar{position:absolute;top:0;right:0;width:100%;height:3px;border-radius:18px 18px 0 0}
+.sc .glow{position:absolute;top:-30px;left:-30px;width:70px;height:70px;border-radius:50%;opacity:.1;filter:blur(25px);pointer-events:none}
+.sc .ico{font-size:24px;margin-bottom:8px;display:block}
+.sc .lbl{color:#64748b;font-size:11px;margin-bottom:4px}
+.sc .val{font-size:20px;font-weight:700;color:#f1f5f9;font-variant-numeric:tabular-nums}
+@media(min-width:500px){.sc .val{font-size:24px}}
+.sc .trnd{display:inline-flex;align-items:center;gap:3px;margin-top:6px;font-size:10px;padding:2px 8px;border-radius:16px;font-weight:500}
+.tu{background:rgba(16,185,129,.12);color:#34d399}.td{background:rgba(239,68,68,.12);color:#f87171}
+
+/* Panel */
+.pnl{background:linear-gradient(145deg,rgba(22,24,40,.95),rgba(14,16,28,.98));border:1px solid rgba(255,255,255,.05);border-radius:18px;padding:18px;margin-bottom:14px}
+.pnl h3{font-size:14px;font-weight:600;color:#94a3b8;margin-bottom:16px}
+.chwrap{position:relative;height:220px;margin:0 -6px}
+@media(min-width:500px){.chwrap{height:260px}}
+.leg{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:12px}
+.leg span{display:flex;align-items:center;gap:5px;font-size:11px;color:#64748b}
+.ldot{width:8px;height:8px;border-radius:50%;display:inline-block}
+
+/* Expense items */
+.ei{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.ei:last-of-type{border-bottom:none}
+.eic{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.einf{flex:1;min-width:0}
+.einf .nm{font-size:13px;color:#e2e8f0;font-weight:500}
+.einf .pc{font-size:10px;color:#475569;margin-top:2px}
+.ebar{height:3px;background:rgba(255,255,255,.04);border-radius:3px;margin-top:4px;overflow:hidden}
+.efill{height:100%;border-radius:3px;transition:width .5s}
+.eamt{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;flex-shrink:0}
+.totrow{display:flex;justify-content:space-between;align-items:center;padding-top:14px;margin-top:6px;border-top:1px solid rgba(255,255,255,.08)}
+.sbox{margin-top:14px;padding:14px;border-radius:12px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.12)}
+.sbar{height:5px;background:rgba(255,255,255,.05);border-radius:5px;margin-top:8px;overflow:hidden}
+.sfill{height:100%;border-radius:5px;background:linear-gradient(90deg,#10b981,#34d399)}
+
+/* Goals */
+.ggrid{display:grid;grid-template-columns:1fr;gap:0}
+@media(min-width:600px){.ggrid{grid-template-columns:1fr 1fr;gap:0 32px}}
+.gi{padding:14px 0;border-bottom:1px solid rgba(255,255,255,.03)}
+.ghdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.gnm{font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px}
+.gamt{font-size:11px;color:#475569;font-variant-numeric:tabular-nums}
+.gbar{height:10px;background:rgba(255,255,255,.04);border-radius:10px;overflow:hidden}
+.gfill{height:100%;border-radius:10px;transition:width .8s}
+.gpct{font-size:12px;font-weight:700;margin-top:4px}
+
+/* Input styles */
+.einput{width:100%;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:#e2e8f0;font-size:16px;font-family:inherit;text-align:center;font-variant-numeric:tabular-nums;transition:all .2s;direction:ltr;outline:none;-webkit-appearance:none}
+.einput:focus{border-color:#6366f1;background:rgba(99,102,241,.08);box-shadow:0 0 0 3px rgba(99,102,241,.15)}
+.einput.inc{color:#34d399}.einput.exp{color:#f87171}.einput.sav{color:#818cf8}
+
+/* Wizard / Setup */
+.wiz-overlay{position:fixed;inset:0;z-index:200;background:rgba(10,11,20,.98);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;overflow-y:auto}
+.wiz-box{width:100%;max-width:500px;text-align:center;padding:20px 0}
+.wiz-box h2{font-size:22px;font-weight:700;margin-bottom:6px;color:#f1f5f9}
+.wiz-box .wiz-sub{font-size:13px;color:#64748b;margin-bottom:28px}
+.wiz-step{font-size:11px;color:#818cf8;margin-bottom:16px;font-weight:500}
+.wiz-fields{display:grid;grid-template-columns:1fr;gap:14px;text-align:right;margin-bottom:24px}
+.wiz-field{display:flex;flex-direction:column;gap:6px}
+.wiz-field label{font-size:12px;color:#94a3b8;font-weight:500;display:flex;align-items:center;gap:6px}
+.wiz-field input{width:100%;padding:14px 16px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:#e2e8f0;font-size:18px;font-family:inherit;text-align:center;direction:ltr;outline:none;-webkit-appearance:none;transition:all .2s}
+.wiz-field input:focus{border-color:#6366f1;background:rgba(99,102,241,.06);box-shadow:0 0 0 3px rgba(99,102,241,.12)}
+.wiz-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+.btn-primary{width:100%;padding:16px;border-radius:14px;border:none;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;box-shadow:0 4px 20px rgba(99,102,241,.35)}
+.btn-primary:active{transform:scale(.97);box-shadow:0 2px 10px rgba(99,102,241,.2)}
+.btn-primary:disabled{opacity:.4;cursor:default}
+.btn-secondary{width:100%;padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:transparent;color:#94a3b8;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;transition:all .2s}
+.btn-secondary:active{background:rgba(255,255,255,.04)}
+.btn-row{display:flex;gap:10px;margin-top:10px}
+.btn-row .btn-secondary{flex:1}
+
+/* Edit cards */
+.ecard{background:rgba(255,255,255,.02);border-radius:14px;padding:14px;margin-bottom:10px;border:1px solid rgba(255,255,255,.04)}
+.ecard-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.ecard-month{font-size:15px;font-weight:600;color:#cbd5e1}
+.ecard-net{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+.ecard-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ecard-field{display:flex;flex-direction:column;gap:4px}
+.ecard-label{font-size:10px;color:#475569;font-weight:500;display:flex;align-items:center;gap:4px}
+.ecard .einput{font-size:15px;padding:10px 12px}
+
+.add-btn{width:100%;padding:14px;border-radius:14px;border:1px dashed rgba(255,255,255,.1);background:transparent;color:#64748b;font-size:14px;cursor:pointer;font-family:inherit;transition:all .25s;display:flex;align-items:center;justify-content:center;gap:8px}
+.add-btn:active{border-color:#6366f1;color:#818cf8;background:rgba(99,102,241,.06)}
+.del-btn{width:34px;height:34px;border-radius:10px;border:1px solid rgba(255,255,255,.06);background:transparent;color:#475569;cursor:pointer;font-size:14px;display:inline-flex;align-items:center;justify-content:center;font-family:inherit}
+.del-btn:active{border-color:#ef4444;color:#ef4444}
+.reset-btn{width:100%;padding:12px;border-radius:12px;border:1px solid rgba(239,68,68,.15);background:transparent;color:#64748b;font-size:13px;cursor:pointer;font-family:inherit;margin-top:12px}
+.reset-btn:active{border-color:#ef4444;color:#ef4444}
+
+/* Goal edit */
+.gedit{display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap}
+.ginput{width:80px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:#e2e8f0;font-size:13px;font-family:inherit;text-align:center;direction:ltr;outline:none;-webkit-appearance:none;transition:all .2s}
+.ginput:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.12)}
+.glbl{font-size:11px;color:#475569}
+
+.footer{text-align:center;margin-top:24px;color:#1e293b;font-size:10px;padding-bottom:20px}
+.prog-dots{display:flex;gap:8px;justify-content:center;margin-bottom:20px}
+.prog-dot{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.08);transition:all .3s}
+.prog-dot.done{background:#6366f1}
+.prog-dot.cur{background:#818cf8;box-shadow:0 0 10px rgba(129,140,248,.5)}
+
+/* Month badge */
+.month-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:8px;background:rgba(99,102,241,.1);color:#818cf8;font-size:11px;font-weight:600;margin-bottom:12px}
+
+/* Upload zone */
+.upload-zone{border:2px dashed rgba(99,102,241,.25);border-radius:16px;padding:28px 16px;text-align:center;cursor:pointer;transition:all .3s;background:rgba(99,102,241,.03);margin-bottom:14px}
+.upload-zone:active,.upload-zone.drag{border-color:#6366f1;background:rgba(99,102,241,.08)}
+.upload-zone .uz-icon{font-size:36px;margin-bottom:8px}
+.upload-zone .uz-title{font-size:14px;color:#cbd5e1;font-weight:600;margin-bottom:4px}
+.upload-zone .uz-sub{font-size:11px;color:#475569}
+.upload-zone input{display:none}
+.upload-types{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+.upload-type{display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:8px;background:rgba(255,255,255,.04);font-size:10px;color:#64748b}
+
+/* Parsed results */
+.parsed-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.12);border-radius:14px;padding:16px;margin-bottom:14px}
+.parsed-box h4{font-size:13px;color:#34d399;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.parsed-box.error{background:rgba(239,68,68,.06);border-color:rgba(239,68,68,.12)}
+.parsed-box.error h4{color:#f87171}
+.parsed-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.parsed-row:last-child{border-bottom:none}
+.parsed-label{font-size:12px;color:#94a3b8}
+.parsed-val{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+.parsed-val.pos{color:#34d399}.parsed-val.neg{color:#f87171}
+.parsed-actions{display:flex;gap:8px;margin-top:14px}
+.parsed-actions button{flex:1}
+
+/* Receipt preview */
+.receipt-preview{border-radius:12px;overflow:hidden;margin-bottom:14px;max-height:300px;position:relative}
+.receipt-preview img{width:100%;height:auto;display:block;max-height:300px;object-fit:contain;background:rgba(255,255,255,.03)}
+.receipt-overlay{position:absolute;bottom:0;left:0;right:0;padding:12px;background:linear-gradient(transparent,rgba(0,0,0,.8))}
+.receipt-overlay span{font-size:11px;color:#94a3b8}
+
+/* Transactions list */
+.tx-list{max-height:400px;overflow-y:auto}
+.tx-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.03)}
+.tx-item:last-child{border-bottom:none}
+.tx-cat{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.tx-info{flex:1;min-width:0}
+.tx-desc{font-size:12px;color:#cbd5e1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx-date{font-size:10px;color:#475569}
+.tx-amt{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;flex-shrink:0}
+
+.file-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:10px;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.15);font-size:12px;color:#818cf8;margin-bottom:10px}
+.file-chip .fc-x{cursor:pointer;opacity:.6;font-size:14px}
+.file-chip .fc-x:hover{opacity:1}
+
+.doc-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:8px;background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.2);font-size:11px;color:#818cf8;font-weight:600;margin-bottom:10px}
+
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.2);border-top:2px solid #818cf8;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.detail-section{background:rgba(255,255,255,.02);border-radius:12px;padding:14px;border:1px solid rgba(255,255,255,.04)}
+.detail-section h4{font-size:12px;color:#94a3b8;font-weight:600;margin-bottom:10px}
+.detail-item{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:12px}
+.detail-item .label{color:#64748b}
+.detail-item .value{color:#e2e8f0;font-weight:600}
+
+@media(min-width:700px){.app{padding:24px 20px;padding-bottom:100px}.cgrid{grid-template-columns:1fr 1fr 1fr 1fr}.hdr h1{font-size:28px}.sc .val{font-size:26px}}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="app" id="app"><div style="text-align:center;padding:100px 20px;color:#64748b">טוען...</div></div>
+<nav class="bnav" id="bnav"></nav>
+
+<script>
+(function(){
+"use strict";
+
+if(typeof pdfjsLib!=="undefined"){pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"}
+
+var MONTHS=["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
+var STORE_KEY="fin_v6";
+
+/* ===== COMPREHENSIVE HEBREW CATEGORIZATION ===== */
+var CATEGORIES={
+  salary:{icon:"💼",name:"משכורת",type:"income",color:"#34d399",keywords:["העברת שכר","הפקדת שכר","שכר","משכורת","salary","העברה מ","שכ״ע","נטו","דוגריט"]},
+  freelance:{icon:"💻",name:"פרילנס",type:"income",color:"#34d399",keywords:["פרילנס","עצמאי","חשבונית","freelance","תשלום עבור שירות","הכנסה עצמאית"]},
+  rental_income:{icon:"🏘️",name:"הכנסה משכירות",type:"income",color:"#34d399",keywords:["שכ״ד","שכר דירה","דמי שכירות","rental","הכנסה משכירות"]},
+  government:{icon:"🏛️",name:"קצבה/מענק",type:"income",color:"#34d399",keywords:["ביטוח לאומי","מס הכנסה החזר","קצבה","מענק","סובסידיה","קופת חיסכון חודשית"]},
+  investment:{icon:"📈",name:"דיבידנד/ריבית",type:"income",color:"#34d399",keywords:["דיבידנד","ריבית","תשואה","dividend","interest","רווח הון","יתרה זקופה"]},
+
+  rent:{icon:"🏠",name:"שכירות/משכנתא",type:"fixed",color:"#fbbf24",keywords:["שכירות","שכ״ד","rent","משכנתא","mortgage","דמי שכירות","תשלום דירה","בעל הדירה"]},
+  arnona:{icon:"🏛️",name:"ארנונה",type:"fixed",color:"#fbbf24",keywords:["ארנונה","עירייה","municipal tax","מס עירוני"]},
+  vaad_bayit:{icon:"🏘️",name:"ועד בית",type:"fixed",color:"#fbbf24",keywords:["ועד בית","ועד הבית","דמי ניהול בניין","building maintenance","תחזוקה"]},
+
+  electric:{icon:"⚡",name:"חשמל",type:"fixed",color:"#fb923c",keywords:["חשמל","חברת חשמל","IEC","electric","חשמלל","דמי חשמל"]},
+  water:{icon:"💧",name:"מים",type:"fixed",color:"#fb923c",keywords:["מים","מי","תאגיד מים","מקורות","דמי מים","water"]},
+  gas:{icon:"🔥",name:"גז",type:"fixed",color:"#fb923c",keywords:["גז","סופרגז","פזגז","אמישראגז","gas","דמי גז"]},
+  internet:{icon:"📡",name:"אינטרנט",type:"fixed",color:"#fb923c",keywords:["אינטרנט","בזק","הוט","פרטנר","סלקום","internet","cellcom","partner","hot","bezeq","012","013","020","טלפון קווי"]},
+  phone:{icon:"📱",name:"טלפון סלולרי",type:"fixed",color:"#fb923c",keywords:["סלולר","פלאפון","cellphone","טלפון נייד","סלולרי"]},
+
+  supermarket:{icon:"🛒",name:"סופרמרקט",type:"shopping",color:"#ef4444",keywords:["סופר","שופרסל","רמי לוי","מגה","יוחננוף","שוק","טיב טעם","חצי חינם","ויקטורי","אושר עד","סופר פארם","פרש מרקט","קרפור","AM:PM","yellow","ירקות","פירות","מכולת","grocery","supermarket","קואופ","סופר-פארם","pn makolet","פיק אנד מיקס"]},
+  restaurant:{icon:"🍽️",name:"מסעדה/קפה",type:"shopping",color:"#ef4444",keywords:["מסעדה","מסעדת","restaurant","קפה","cafe","בית קפה","פיצה","pizza","סושי","sushi","מקדונלד","בורגר","burger","KFC","ארומה","aroma","קפיטריה","בר","ביסטרו","פאב","pub","בייגל","burger king"]},
+  delivery:{icon:"🛵",name:"משלוח אוכל",type:"shopping",color:"#ef4444",keywords:["וולט","wolt","תן ביס","10bis","משלוח","delivery","גט","מנות","שף","ubereats"]},
+
+  fuel:{icon:"⛽",name:"דלק",type:"shopping",color:"#a78bfa",keywords:["דלק","סונול","פז","דור אלון","דלק","ten","delek","fuel","אנרגיה","yellow","בנזין","סולר","station","תחנה"]},
+  parking:{icon:"🅿️",name:"חניה",type:"shopping",color:"#a78bfa",keywords:["חניה","חנייה","חניון","parking","אחוזת חוף","פנגו","pango","cellopark","parkina","פרקינה"]},
+  public_transport:{icon:"🚌",name:"תחבורה ציבורית",type:"shopping",color:"#a78bfa",keywords:["רכבת","אגד","דן","מטרופולין","קו-קב","רב-קו","rav-kav","אוטובוס","bus","train","metro","רכב ציבורי"]},
+  car_maint:{icon:"🔧",name:"טיפול רכב",type:"shopping",color:"#a78bfa",keywords:["רכב","טסט","ביטוח רכב","car","vehicle","טיפול","מוסך","garage","שמן","צמיגים","maintenance","תיקון"]},
+  tolls:{icon:"🛣️",name:"אגרות דרך",type:"shopping",color:"#a78bfa",keywords:["כביש 6","כביש אגרה","toll","fastlane","כביש דו-קווי","וזר","אגרה"]},
+
+  health_insurance:{icon:"🏥",name:"ביטוח בריאות",type:"fixed",color:"#22d3ee",keywords:["ביטוח בריאות","כללית","מכבי","מאוחדת","לאומית","kupat holim","קופת חולים"]},
+  car_insurance:{icon:"🛡️",name:"ביטוח רכב",type:"fixed",color:"#22d3ee",keywords:["ביטוח רכב","ביטוח מקיף","ביטוח חובה","הראל","מגדל","כלל ביטוח","הפניקס","AIG","אלטשולר"]},
+  life_insurance:{icon:"💜",name:"ביטוח חיים",type:"fixed",color:"#22d3ee",keywords:["ביטוח חיים","life insurance"]},
+  home_insurance:{icon:"🏠",name:"ביטוח דירה",type:"fixed",color:"#22d3ee",keywords:["ביטוח דירה","ביטוח מבנה","ביטוח תכולה","home insurance"]},
+  general_insurance:{icon:"📋",name:"ביטוחים",type:"fixed",color:"#22d3ee",keywords:["ביטוח","insurance","פוליסה","פרמיה","פוליסה"]},
+
+  pension:{icon:"🏦",name:"פנסיה",type:"fixed",color:"#a78bfa",keywords:["פנסיה","pension","גמל","קופת גמל","קרן פנסיה","הפרשה לפנסיה","מנורה","מיטב","אלטשולר שמואלי"]},
+  loan:{icon:"💳",name:"הלוואה",type:"fixed",color:"#a78bfa",keywords:["הלוואה","loan","החזר הלוואה","תשלום","אשראי","credit","הוראת קבע"]},
+  mortgage:{icon:"🏠",name:"משכנתא",type:"fixed",color:"#a78bfa",keywords:["משכנתא","mortgage","תשלום משכנתא"]},
+  savings:{icon:"🪙",name:"חיסכון",type:"savings",color:"#818cf8",keywords:["קרן השתלמות","השתלמות","חיסכון","saving","פקדון","deposit"]},
+  investment_out:{icon:"📊",name:"השקעה",type:"savings",color:"#818cf8",keywords:["השקעה","investment","מניות","stock","קרן נאמנות","תעודת סל","ETF","קרן","ברוקר","etrade"]},
+  bank_fees:{icon:"💰",name:"עמלות בנק",type:"fixed",color:"#a78bfa",keywords:["עמלה","עמלת","commission","fee","דמי ניהול","דמי חשבון"]},
+
+  clothing:{icon:"👕",name:"ביגוד",type:"shopping",color:"#f472b6",keywords:["בגדים","אופנה","H&M","זארה","ZARA","FOX","קסטרו","castro","golf","רנואר","renuar","מנגו","MANGO","אמריקן איגל","pull&bear","תמנון","הודיס","hnm","gloria jeans"]},
+  electronics:{icon:"💻",name:"אלקטרוניקה",type:"shopping",color:"#f472b6",keywords:["אלקטרוניקה","מחשב","computer","laptop","KSP","באג","BUG","זאפ","ivory","איביי","amazon","אמזון","עלי אקספרס","aliexpress","טק טק","techtech"]},
+  home_goods:{icon:"🛋️",name:"בית ורהיטים",type:"shopping",color:"#f472b6",keywords:["רהיטים","furniture","IKEA","איקאה","הום סנטר","ACE","מקס סטוק","עצמלה","ריהוט","כלי בית","keter"]},
+  health_shopping:{icon:"🏥",name:"בריאות",type:"shopping",color:"#f472b6",keywords:["בית מרקחת","תרופות","pharmacy","סופר-פארם","רופא","דוקטור","doctor","טיפול שיניים","רפואה","אופטיקה","משקפיים","שיניים"]},
+  kids:{icon:"👶",name:"ילדים",type:"shopping",color:"#f472b6",keywords:["גן ילדים","צהרון","חוגים","ילדים","kids","בית ספר","school","לימודים","תשלום גן","תיק ספר"]},
+  pets:{icon:"🐶",name:"חיות מחמד",type:"shopping",color:"#f472b6",keywords:["חיות","וטרינר","vet","מזון לחיות","pet","פטשופ"]},
+
+  streaming:{icon:"🎬",name:"סטרימינג",type:"shopping",color:"#22d3ee",keywords:["נטפליקס","netflix","spotify","ספוטיפיי","Disney","דיסני","HBO","אפל TV","apple","youtube","יוטיוב","סלקום TV"]},
+  gym:{icon:"💪",name:"חדר כושר",type:"shopping",color:"#22d3ee",keywords:["חדר כושר","gym","הולמס","Holmes","סטודיו","יוגה","פילאטיס","ספורט"]},
+  entertainment:{icon:"🎭",name:"בילוי",type:"shopping",color:"#22d3ee",keywords:["סרט","קולנוע","cinema","הופעה","show","הצגה","theater","כרטיס","ticket","בילוי","קונצרט"]},
+
+  education:{icon:"📚",name:"חינוך",type:"shopping",color:"#22d3ee",keywords:["לימודים","אוניברסיטה","מכללה","קורס","course","שכר לימוד","tuition","סמינר","קורס"]},
+
+  transfer:{icon:"🔄",name:"העברה",type:"other",color:"#64748b",keywords:["העברה ל","העברת כספים","transfer","bit","ביט","paybox","פייבוקס","פפר","pepper","wise"]}
+};
+
+/* ===== STATE ===== */
+var state={
+  setupDone:false,
+  wizStep:0,
+  profile:{salary:0,extraIncome:0,rent:0,bills:0,insurance:0,pension:0,loans:0,savingsGoal:0},
+  goals:[],
+  months:{},
+  sel:null,
+  view:"dashboard"
+};
+
+function monthKey(y,m){return y+"-"+(m<10?"0":"")+m}
+function monthLabel(key){var p=key.split("-");return MONTHS[parseInt(p[1],10)-1]+" "+p[0]}
+function monthShort(key){var p=key.split("-");return MONTHS[parseInt(p[1],10)-1]}
+function curMonthKey(){var d=new Date();return monthKey(d.getFullYear(),d.getMonth()+1)}
+function getAllMonthKeys(){var keys=[];for(var k in state.months){keys.push(k)}keys.sort();return keys}
+function fmt(v){return "\u20AA"+(v||0).toLocaleString("he-IL")}
+function prs(s){var n=parseInt(String(s).replace(/[^0-9\-]/g,""),10);return isNaN(n)?0:n}
+
+/* ===== COMPREHENSIVE CATEGORIZATION ===== */
+function categorizeTransaction(desc,amount){
+  var lower=String(desc).toLowerCase();
+  var possibles=[];
+
+  for(var catKey in CATEGORIES){
+    var cat=CATEGORIES[catKey];
+    var keywords=cat.keywords||[];
+    for(var k=0;k<keywords.length;k++){
+      var kw=keywords[k].toLowerCase();
+      if(lower.indexOf(kw)!==-1){
+        possibles.push({key:catKey,cat:cat,priority:keywords[k].length});
+        break;
+      }
+    }
+  }
+
+  if(possibles.length===0){
+    return {icon:"❓",name:"אחר",type:"other",color:"#64748b",key:"other"};
+  }
+
+  possibles.sort(function(a,b){return b.priority-a.priority});
+  var best=possibles[0];
+  best.key=best.key;
+  return best.cat;
+}
+
+/* ===== PERSISTENCE ===== */
+function save(){try{localStorage.setItem(STORE_KEY,JSON.stringify(state))}catch(e){}}
+function load(){
+  try{
+    var s=localStorage.getItem(STORE_KEY);
+    if(s){var loaded=JSON.parse(s);for(var k in loaded){state[k]=loaded[k]}}
+  }catch(e){}
+}
+
+/* ===== PDF PARSING ===== */
+window.parsePDFFile=function(file,callback){
+  var reader=new FileReader();
+  reader.onload=function(event){
+    var typedarray=new Uint8Array(event.target.result);
+    if(typeof pdfjsLib==="undefined"){
+      callback({error:"PDF library not loaded",text:""});
+      return;
+    }
+    var task=pdfjsLib.getDocument(typedarray);
+    task.promise.then(function(pdf){
+      var promises=[];
+      for(var pageNum=1;pageNum<=pdf.numPages;pageNum++){
+        promises.push(pdf.getPage(pageNum).then(function(page){
+          return page.getTextContent().then(function(textContent){
+            return textContent.items.map(function(item){return item.str}).join(" ");
+          });
+        }));
+      }
+      Promise.all(promises).then(function(pages){
+        var allText=pages.join("\n");
+        callback({text:allText,type:"PDF"});
+      }).catch(function(e){
+        callback({error:e.message,text:""});
+      });
+    }).catch(function(e){
+      callback({error:e.message,text:""});
+    });
+  };
+  reader.readAsArrayBuffer(file);
+};
+
+/* ===== DOCUMENT DETECTION ===== */
+function detectDocumentType(text){
+  var lower=text.toLowerCase();
+  var hasBank=lower.indexOf("בנק")!==-1||lower.indexOf("bank")!==-1;
+  var hasDate=lower.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/);
+  var hasAmount=lower.match(/\d+[\.,]\d{2}/);
+  var hasSalary=lower.indexOf("משכורת")!==-1||lower.indexOf("salary")!==-1;
+  var hasCredit=lower.indexOf("אשראי")!==-1||lower.indexOf("credit card")!==-1;
+
+  if(hasSalary)return {type:"payslip",icon:"💼",label:"תלוש משכורת"};
+  if(hasCredit&&hasDate&&hasAmount)return {type:"cc",icon:"💳",label:"דוח כרטיס אשראי"};
+  if(hasBank&&hasDate&&hasAmount)return {type:"bank",icon:"🏦",label:"דוח בנק"};
+  if(hasDate&&hasAmount)return {type:"receipt",icon:"🧾",label:"קבלה"};
+  return {type:"generic",icon:"📄",label:"מסמך"};
+}
+
+/* ===== PARSE NUMBER FROM STRING ===== */
+function parseAmount(s){
+  if(!s)return 0;
+  var raw=String(s).trim();
+  // Skip if it looks like a date (dd/mm/yyyy or dd-mm-yyyy or dd.mm.yyyy)
+  if(/^\d{1,2}[\/\.\-]\d{1,2}[\/\.\-]\d{2,4}$/.test(raw))return 0;
+  // Skip if it looks like a time (HH:MM)
+  if(/^\d{1,2}:\d{2}$/.test(raw))return 0;
+  var str=raw.replace(/[^\d.\-,]/g,"");
+  // Handle 1,234.56 or 1.234,56
+  if(str.indexOf(",")>-1&&str.indexOf(".")>-1){
+    if(str.lastIndexOf(",")>str.lastIndexOf(".")){str=str.replace(/\./g,"").replace(",",".")}
+    else{str=str.replace(/,/g,"")}
+  }else if(str.indexOf(",")>-1){
+    var afterComma=str.split(",").pop();
+    if(afterComma.length<=2){str=str.replace(",",".")}
+    else{str=str.replace(/,/g,"")}
+  }
+  var n=parseFloat(str);
+  return isNaN(n)?0:n;
+}
+
+/* ===== PARSE STRUCTURED TABLE DATA (from PapaParse/XLSX) ===== */
+function parseStructuredData(rows,fileName){
+  if(!rows||rows.length===0)return{transactions:[],income:0,expense:0,summary:{}};
+
+  var cols=Object.keys(rows[0]);
+  var dateCol=null,descCol=null,amountCol=null,creditCol=null,debitCol=null;
+
+  // Columns to SKIP (balance, reference, account numbers)
+  var skipWords=["יתרה","balance","אסמכתא","reference","ref","מספר","number","id","חשבון","account"];
+
+  for(var i=0;i<cols.length;i++){
+    var cl=cols[i].toLowerCase().trim();
+    // Skip balance/reference columns
+    var isSkip=false;
+    for(var sk=0;sk<skipWords.length;sk++){if(cl.indexOf(skipWords[sk])>-1){isSkip=true;break}}
+    if(isSkip)continue;
+
+    if(!dateCol&&(cl.indexOf("date")>-1||cl.indexOf("תאריך")>-1))dateCol=cols[i];
+    if(!descCol&&(cl.indexOf("desc")>-1||cl.indexOf("תיאור")>-1||cl.indexOf("פרטים")>-1||cl.indexOf("שם")>-1||cl.indexOf("פירוט")>-1||cl.indexOf("description")>-1))descCol=cols[i];
+    if(!amountCol&&(cl.indexOf("amount")>-1||cl.indexOf("סכום")>-1||cl.indexOf("סך")>-1))amountCol=cols[i];
+    if(!creditCol&&(cl.indexOf("credit")>-1||cl.indexOf("זכות")>-1))creditCol=cols[i];
+    if(!debitCol&&(cl.indexOf("debit")>-1||cl.indexOf("חובה")>-1||cl.indexOf("חיוב")>-1))debitCol=cols[i];
+  }
+  if(!descCol&&cols.length>1)descCol=cols[1];
+  if(!amountCol&&!creditCol&&cols.length>2)amountCol=cols[cols.length-1];
+
+  var transactions=[];
+  var incomeTotal=0,expenseTotal=0;
+  var summary={};
+
+  for(var r=0;r<rows.length;r++){
+    var row=rows[r];
+    var desc=descCol?String(row[descCol]||"").trim():"";
+    var date=dateCol?String(row[dateCol]||"").trim():"";
+    var amount=0;
+
+    if(creditCol&&debitCol){
+      var cr=parseAmount(row[creditCol]);
+      var db=parseAmount(row[debitCol]);
+      amount=cr>0?cr:-db;
+    }else if(amountCol){
+      amount=parseAmount(row[amountCol]);
+    }
+
+    if(amount===0&&!desc)continue;
+    // Skip unreasonable amounts (account numbers, balances over 500K)
+    if(Math.abs(amount)>500000)continue;
+    if(desc.length<2)desc="עסקה "+(r+1);
+
+    var cat=categorizeTransaction(desc,amount);
+    // credit/debit columns: positive=credit=income, negative=debit=expense
+    // single amount column (credit cards): always positive but category decides direction
+    var isIncome=cat.type==="income"||(cat.type==="other"&&amount>0);
+    var absAmt=Math.abs(amount);
+
+    transactions.push({desc:desc,date:date,amount:absAmt,cat:cat.name,catObj:cat,isIncome:isIncome});
+
+    if(isIncome){incomeTotal+=absAmt}else{expenseTotal+=absAmt}
+
+    var catKey=cat.name;
+    if(!summary[catKey]){summary[catKey]={icon:cat.icon,type:cat.type,color:cat.color,total:0,count:0}}
+    summary[catKey].total+=absAmt;
+    summary[catKey].count++;
+  }
+
+  return{transactions:transactions,income:Math.round(incomeTotal),expense:Math.round(expenseTotal),summary:summary};
+}
+
+/* ===== PARSE RAW TEXT (from PDF) ===== */
+function parseRawText(text){
+  var lines=text.split("\n");
+  var transactions=[];
+  var incomeTotal=0,expenseTotal=0;
+  var summary={};
+
+  // Date pattern to strip
+  var dateRegex=/\d{1,2}[\/\.\-]\d{1,2}[\/\.\-]\d{2,4}/g;
+  // Match all numbers: with/without commas, with/without decimals, with/without minus
+  var numRegex=/[\-]?\d[\d,]*(?:\.\d{1,2})?/g;
+
+  // First pass: collect all lines' last numbers to detect balance column
+  var lastNums=[];
+  for(var pre=0;pre<lines.length;pre++){
+    var preLine=lines[pre].replace(dateRegex,"").trim();
+    var preNums=preLine.match(numRegex);
+    if(preNums&&preNums.length>=2){
+      lastNums.push(parseAmount(preNums[preNums.length-1]));
+    }
+  }
+  // If we have 3+ lines with last numbers and they look like running balance (all > 1000, sequential changes), skip last num
+  var hasBalanceCol=lastNums.length>=3;
+  if(hasBalanceCol){
+    var bigCount=0;
+    for(var bl=0;bl<lastNums.length;bl++){if(Math.abs(lastNums[bl])>1000)bigCount++}
+    hasBalanceCol=bigCount>lastNums.length*0.5;
+  }
+
+  for(var i=0;i<lines.length;i++){
+    var line=lines[i].trim();
+    if(line.length<3)continue;
+
+    // Skip header/summary lines
+    var lower=line.toLowerCase();
+    if(lower.indexOf("סה\"כ")>-1||lower.indexOf("סהכ")>-1||lower.indexOf("total")>-1)continue;
+    if(lower.indexOf("יתרה:")>-1||lower.indexOf("balance")>-1)continue;
+    if(lower.indexOf("חשבון:")>-1||lower.indexOf("סניף:")>-1)continue;
+    if(lower.indexOf("תקופה:")>-1||lower.indexOf("period")>-1)continue;
+
+    // Strip dates
+    var cleaned=line.replace(dateRegex,"");
+
+    // Find all numbers
+    var nums=cleaned.match(numRegex);
+    if(!nums||nums.length===0)continue;
+
+    // Parse all numbers
+    var parsed=[];
+    for(var a=0;a<nums.length;a++){
+      var v=parseAmount(nums[a]);
+      if(v!==0)parsed.push(v);
+    }
+    if(parsed.length===0)continue;
+
+    // If balance column detected and we have 2+ numbers, skip the last one (it's the balance)
+    var amountCandidates=parsed;
+    if(hasBalanceCol&&parsed.length>=2){
+      amountCandidates=parsed.slice(0,-1);
+    }
+
+    // Filter out unreasonable amounts (> 500K = account numbers etc)
+    var reasonable=[];
+    for(var r=0;r<amountCandidates.length;r++){
+      if(Math.abs(amountCandidates[r])<=500000)reasonable.push({val:amountCandidates[r],raw:nums[r]});
+    }
+    if(reasonable.length===0)continue;
+
+    // Prefer numbers with decimal points (monetary) over plain integers (reference numbers)
+    var withDecimal=[];
+    var withoutDecimal=[];
+    for(var rd=0;rd<reasonable.length;rd++){
+      if(reasonable[rd].raw&&reasonable[rd].raw.indexOf(".")>-1){withDecimal.push(reasonable[rd])}
+      else{withoutDecimal.push(reasonable[rd])}
+    }
+    var bestAmt;
+    if(withDecimal.length>0){bestAmt=withDecimal[0].val}
+    else if(withoutDecimal.length>0){
+      // For integers: skip small ones that look like reference numbers (4+ digits, no context)
+      // Take the one most likely to be an amount
+      bestAmt=withoutDecimal[withoutDecimal.length-1].val;
+    }
+    else{bestAmt=reasonable[0].val}
+
+    // Get description
+    var desc=line.replace(dateRegex,"").replace(numRegex,"").replace(/[,\t|]/g," ").replace(/\s+/g," ").trim();
+    if(desc.length<2)desc="עסקה";
+
+    var cat=categorizeTransaction(desc,bestAmt);
+    // Determine income/expense: positive=income OR category says income
+    // For bank statements without signs: use category type
+    var isIncome=cat.type==="income";
+    if(bestAmt<0)isIncome=false;
+
+    var absAmt=Math.abs(bestAmt);
+    if(absAmt<1)continue;
+
+    transactions.push({desc:desc,amount:absAmt,cat:cat.name,catObj:cat,isIncome:isIncome});
+    if(isIncome){incomeTotal+=absAmt}else{expenseTotal+=absAmt}
+
+    var catKey=cat.name;
+    if(!summary[catKey]){summary[catKey]={icon:cat.icon,type:cat.type,color:cat.color,total:0,count:0}}
+    summary[catKey].total+=absAmt;
+    summary[catKey].count++;
+  }
+
+  return{transactions:transactions,income:Math.round(incomeTotal),expense:Math.round(expenseTotal),summary:summary};
+}
+
+/* ===== HANDLE FILE UPLOAD ===== */
+window.handleFileUpload=function(file,callback){
+  var fileName=file.name.toLowerCase();
+
+  if(fileName.indexOf(".pdf")!==-1){
+    window.parsePDFFile(file,function(result){
+      if(result.error){callback({error:result.error});return}
+      var type=detectDocumentType(result.text);
+      var parsed=parseRawText(result.text);
+      parsed.detectedType=type;
+      parsed.fileName=file.name;
+      callback(parsed);
+    });
+
+  }else if(fileName.indexOf(".csv")!==-1||fileName.indexOf(".txt")!==-1){
+    if(typeof Papa!=="undefined"){
+      Papa.parse(file,{
+        header:true,skipEmptyLines:true,encoding:"UTF-8",
+        complete:function(results){
+          if(!results.data||results.data.length===0){
+            // Fallback: read as raw text
+            var reader2=new FileReader();
+            reader2.onload=function(ev){
+              var type=detectDocumentType(ev.target.result);
+              var parsed=parseRawText(ev.target.result);
+              parsed.detectedType=type;parsed.fileName=file.name;
+              callback(parsed);
+            };
+            reader2.readAsText(file);
+            return;
+          }
+          var allText=JSON.stringify(results.data);
+          var type=detectDocumentType(allText);
+          var parsed=parseStructuredData(results.data,file.name);
+          parsed.detectedType=type;parsed.fileName=file.name;
+          callback(parsed);
+        },
+        error:function(){callback({error:"שגיאה בקריאת CSV"})}
+      });
+    }else{
+      // PapaParse not loaded — raw text fallback
+      var reader=new FileReader();
+      reader.onload=function(e){
+        var type=detectDocumentType(e.target.result);
+        var parsed=parseRawText(e.target.result);
+        parsed.detectedType=type;parsed.fileName=file.name;
+        callback(parsed);
+      };
+      reader.readAsText(file);
+    }
+
+  }else if(fileName.indexOf(".xlsx")!==-1||fileName.indexOf(".xls")!==-1){
+    if(typeof XLSX==="undefined"){callback({error:"ספריית Excel לא נטענה. נסה שוב."});return}
+    var reader=new FileReader();
+    reader.onload=function(e){
+      try{
+        var wb=XLSX.read(new Uint8Array(e.target.result),{type:"array"});
+        var ws=wb.Sheets[wb.SheetNames[0]];
+        var rows=XLSX.utils.sheet_to_json(ws,{defval:""});
+        if(!rows||rows.length===0){callback({error:"לא נמצאו נתונים"});return}
+        var allText=JSON.stringify(rows);
+        var type=detectDocumentType(allText);
+        var parsed=parseStructuredData(rows,file.name);
+        parsed.detectedType=type;parsed.fileName=file.name;
+        callback(parsed);
+      }catch(err){callback({error:err.message})}
+    };
+    reader.readAsArrayBuffer(file);
+
+  }else if(fileName.match(/\.(jpg|jpeg|png|webp|gif|heic)$/)){
+    callback({detectedType:{type:"receipt",icon:"🧾",label:"קבלה/תמונה"},transactions:[],income:0,expense:0,summary:{},fileName:file.name});
+
+  }else{
+    callback({error:"סוג קובץ לא נתמך. נסה CSV, Excel, PDF או תמונה."});
+  }
+};
+
+/* ===== SETUP WIZARD ===== */
+function renderWizard(){
+  var step=state.wizStep;
+  var totalSteps=3;
+  var p=state.profile;
+  var h='<div class="wiz-overlay"><div class="wiz-box">';
+
+  h+='<div class="prog-dots">';
+  for(var i=0;i<totalSteps;i++){
+    h+='<div class="prog-dot'+(i<step?" done":"")+(i===step?" cur":"")+'"></div>';
+  }
+  h+='</div>';
+
+  if(step===0){
+    h+='<h2>👋 ברוך הבא!</h2>';
+    h+='<div class="wiz-sub">בוא נגדיר את הפרופיל הפיננסי שלך<br>זה ייקח פחות מדקה</div>';
+    h+='<div class="upload-zone" id="wizUpload0" onclick="document.getElementById(\'wizFileInput0\').click()" ondrop="handleWizDrop(event,0)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" style="margin-bottom:18px;padding:18px 14px;cursor:pointer">';
+    h+='<input type="file" id="wizFileInput0" accept=".csv,.xlsx,.xls,.jpg,.jpeg,.png,.webp,.pdf" onchange="handleWizFile(this,0)" style="display:none">';
+    h+='<div class="uz-icon" style="font-size:28px">📎</div>';
+    h+='<div class="uz-title">העלה דוח בנק, תלוש משכורת, או קבלה</div>';
+    h+='<div class="uz-sub">CSV, Excel, PDF, או תמונה</div></div>';
+    if(window._wizParsed0){
+      var wp=window._wizParsed0;
+      h+='<div class="parsed-box"><h4>'+wp.detectedType.icon+" "+wp.detectedType.label+'</h4>';
+      if(wp.transactions.length>0)h+='<div class="parsed-row"><span class="parsed-label">עסקאות</span><span class="parsed-val">'+wp.transactions.length+'</span></div>';
+      if(wp.income>0)h+='<div class="parsed-row"><span class="parsed-label">💵 הכנסות</span><span class="parsed-val pos">'+fmt(wp.income)+'</span></div>';
+      if(wp.expense>0)h+='<div class="parsed-row"><span class="parsed-label">🧾 הוצאות</span><span class="parsed-val neg">'+fmt(wp.expense)+'</span></div>';
+      h+='<div class="parsed-actions"><button class="btn-secondary" onclick="applyWizParsed(0)" style="font-size:13px">החל מעסקאות ✓</button></div></div>';
+    }
+    h+='<button class="btn-primary" onclick="wizNext()">בוא נתחיל →</button>';
+
+  }else if(step===1){
+    h+='<h2>💵 הכנסות</h2>';
+    h+='<div class="wiz-sub">כמה אתה מרוויח בחודש?</div>';
+    h+='<div class="upload-zone" id="wizUpload1" onclick="document.getElementById(\'wizFileInput1\').click()" ondrop="handleWizDrop(event,1)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" style="margin-bottom:18px;padding:18px 14px;cursor:pointer">';
+    h+='<input type="file" id="wizFileInput1" accept=".csv,.xlsx,.xls,.jpg,.jpeg,.png,.webp,.pdf" onchange="handleWizFile(this,1)" style="display:none">';
+    h+='<div class="uz-icon" style="font-size:28px">📎</div>';
+    h+='<div class="uz-title">העלה תלוש משכורת</div>';
+    h+='<div class="uz-sub">CSV, Excel, PDF, או תמונה</div></div>';
+    if(window._wizParsed1&&window._wizParsed1.income){
+      h+='<div class="parsed-box"><h4>✅ זוהה '+fmt(window._wizParsed1.income)+'</h4></div>';
+    }
+    h+='<div class="wiz-fields">';
+    h+='<div class="wiz-field"><label>💼 משכורת נטו</label><input id="w_salary" type="text" inputmode="numeric" value="'+(p.salary||"")+'" placeholder="0"></div>';
+    h+='<div class="wiz-field"><label>💰 הכנסות נוספות</label><input id="w_extra" type="text" inputmode="numeric" value="'+(p.extraIncome||"")+'" placeholder="0"></div>';
+    h+='</div>';
+    h+='<button class="btn-primary" onclick="wizSaveIncome()">המשך →</button>';
+    h+='<div class="btn-row"><button class="btn-secondary" onclick="wizBack()">← חזור</button></div>';
+
+  }else if(step===2){
+    h+='<h2>🏠 הוצאות קבועות</h2>';
+    h+='<div class="wiz-sub">הוצאות שחוזרות כל חודש</div>';
+    h+='<div class="upload-zone" id="wizUpload2" onclick="document.getElementById(\'wizFileInput2\').click()" ondrop="handleWizDrop(event,2)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" style="margin-bottom:18px;padding:18px 14px;cursor:pointer">';
+    h+='<input type="file" id="wizFileInput2" accept=".csv,.xlsx,.xls,.jpg,.jpeg,.png,.webp,.pdf" onchange="handleWizFile(this,2)" style="display:none">';
+    h+='<div class="uz-icon" style="font-size:28px">📎</div>';
+    h+='<div class="uz-title">העלה דוח בנק</div>';
+    h+='<div class="uz-sub">CSV, Excel, PDF, או תמונה</div></div>';
+    if(window._wizParsed2&&window._wizParsed2.summary){
+      h+='<div class="parsed-box"><h4>✅ זוהה מהקובץ</h4>';
+      var ws=window._wizParsed2.summary||{};
+      var wsKeys=[];for(var wk in ws){wsKeys.push(wk)}wsKeys.slice(0,5).forEach(function(wk){
+        var wc=ws[wk];h+='<div class="parsed-row"><span class="parsed-label">'+wc.icon+" "+wk+'</span><span class="parsed-val neg">'+fmt(Math.abs(wc.total))+'</span></div>';
+      });
+      h+='<div class="parsed-actions"><button class="btn-secondary" onclick="applyWizParsed(2)" style="font-size:13px">החל נתונים ✓</button></div></div>';
+    }
+    h+='<div class="wiz-fields">';
+    h+='<div class="wiz-row">';
+    h+='<div class="wiz-field"><label>🏠 שכירות/משכנתא</label><input id="w_rent" type="text" inputmode="numeric" value="'+(p.rent||"")+'" placeholder="0"></div>';
+    h+='<div class="wiz-field"><label>⚡ חשבונות</label><input id="w_bills" type="text" inputmode="numeric" value="'+(p.bills||"")+'" placeholder="0"></div>';
+    h+='</div>';
+    h+='<div class="wiz-row">';
+    h+='<div class="wiz-field"><label>🛡️ ביטוחים</label><input id="w_ins" type="text" inputmode="numeric" value="'+(p.insurance||"")+'" placeholder="0"></div>';
+    h+='<div class="wiz-field"><label>🏦 פנסיה</label><input id="w_pension" type="text" inputmode="numeric" value="'+(p.pension||"")+'" placeholder="0"></div>';
+    h+='</div>';
+    h+='<div class="wiz-field"><label>💳 הלוואות/החזרים</label><input id="w_loans" type="text" inputmode="numeric" value="'+(p.loans||"")+'" placeholder="0"></div>';
+    h+='</div>';
+    h+='<div style="background:rgba(255,255,255,.03);border-radius:12px;padding:14px;margin-bottom:20px;text-align:center">';
+    var totalFixed=(p.rent||0)+(p.bills||0)+(p.insurance||0)+(p.pension||0)+(p.loans||0);
+    var totalIncome=(p.salary||0)+(p.extraIncome||0);
+    var freeAfter=totalIncome-totalFixed;
+    h+='<div style="font-size:11px;color:#64748b;margin-bottom:6px">לאחר הוצאות קבועות נשאר לך</div>';
+    h+='<div style="font-size:24px;font-weight:700;color:'+(freeAfter>=0?"#34d399":"#f87171")+'">'+fmt(freeAfter)+'</div>';
+    h+='</div>';
+    h+='<button class="btn-primary" onclick="wizFinish()">סיים הגדרה ✓</button>';
+    h+='<div class="btn-row"><button class="btn-secondary" onclick="wizBack()">← חזור</button></div>';
+  }
+
+  h+='</div></div>';
+  document.getElementById("app").innerHTML=h;
+  document.getElementById("bnav").innerHTML="";
+}
+
+window.wizNext=function(){state.wizStep++;renderWizard()};
+window.wizBack=function(){state.wizStep--;renderWizard()};
+window.wizSaveIncome=function(){
+  state.profile.salary=prs(document.getElementById("w_salary").value);
+  state.profile.extraIncome=prs(document.getElementById("w_extra").value);
+  state.wizStep++;save();renderWizard();
+};
+window.wizFinish=function(){
+  state.profile.rent=prs(document.getElementById("w_rent").value);
+  state.profile.bills=prs(document.getElementById("w_bills").value);
+  state.profile.insurance=prs(document.getElementById("w_ins").value);
+  state.profile.pension=prs(document.getElementById("w_pension").value);
+  state.profile.loans=prs(document.getElementById("w_loans").value);
+  state.setupDone=true;
+  if(!state.selYear)state.selYear=new Date().getFullYear();
+  state.goals=[
+    {name:"חיסכון שנתי",current:0,target:(state.profile.savingsGoal||0)*12,color:"#818cf8",icon:"🛡️"},
+    {name:"קרן חירום",current:0,target:(state.profile.salary||0)*3,color:"#fbbf24",icon:"⚡"},
+  ];
+  createYearMonths(new Date().getFullYear());
+  state.sel=curMonthKey();
+  save();render();renderNav();
+};
+
+window.handleDragOver=function(e){e.preventDefault();e.stopPropagation();if(e.currentTarget){e.currentTarget.classList.add("drag")}};
+window.handleDragLeave=function(e){e.preventDefault();if(e.currentTarget){e.currentTarget.classList.remove("drag")}};
+
+window.handleWizFile=function(input,step){
+  if(!input.files||input.files.length===0)return;
+  var file=input.files[0];
+  var zone=document.getElementById("wizUpload"+step);
+  if(zone)zone.innerHTML='<div style="text-align:center;padding:20px"><div style="font-size:24px;animation:spin 1s linear infinite;display:inline-block">⏳</div><div style="font-size:12px;color:#94a3b8;margin-top:8px">מנתח קובץ...</div></div>';
+
+  window.handleFileUpload(file,function(result){
+    if(result.error){
+      if(zone)zone.innerHTML='<div style="color:#f87171;font-size:12px;padding:16px">שגיאה: '+result.error+'</div>';
+      return;
+    }
+    window["_wizParsed"+step]=result;
+    renderWizard();
+  });
+};
+
+window.handleWizDrop=function(e,step){
+  e.preventDefault();e.stopPropagation();
+  if(e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files.length>0){
+    window.handleWizFile({files:e.dataTransfer.files},step);
+  }
+};
+
+window.applyWizParsed=function(step){
+  var parsed=window["_wizParsed"+step];
+  if(!parsed)return;
+  var p=state.profile;
+  var s=parsed.summary||{};
+
+  if(step===0){
+    // Auto-fill everything from the document
+    if(parsed.income>0)p.salary=parsed.income;
+    // Map fixed expenses from categories
+    for(var k in s){
+      var c=s[k];
+      var val=Math.round(c.total);
+      if(c.type==="fixed"){
+        if(k.indexOf("שכירות")>-1||k.indexOf("משכנתא")>-1)p.rent=val;
+        else if(k.indexOf("ארנונה")>-1||k.indexOf("חשמל")>-1||k.indexOf("מים")>-1||k.indexOf("גז")>-1||k.indexOf("אינטרנט")>-1||k.indexOf("טלפון")>-1)p.bills=(p.bills||0)+val;
+        else if(k.indexOf("ביטוח")>-1)p.insurance=(p.insurance||0)+val;
+        else if(k.indexOf("פנסיה")>-1)p.pension=val;
+        else if(k.indexOf("הלוואה")>-1||k.indexOf("עמלות")>-1)p.loans=(p.loans||0)+val;
+      }
+    }
+    save();
+  }else if(step===1){
+    if(parsed.income>0)p.salary=parsed.income;
+    save();
+  }else if(step===2){
+    for(var k2 in s){
+      var c2=s[k2];
+      var val2=Math.round(c2.total);
+      if(c2.type==="fixed"){
+        if(k2.indexOf("שכירות")>-1||k2.indexOf("משכנתא")>-1)p.rent=val2;
+        else if(k2.indexOf("ארנונה")>-1||k2.indexOf("חשמל")>-1||k2.indexOf("מים")>-1||k2.indexOf("גז")>-1||k2.indexOf("אינטרנט")>-1||k2.indexOf("טלפון")>-1)p.bills=(p.bills||0)+val2;
+        else if(k2.indexOf("ביטוח")>-1)p.insurance=(p.insurance||0)+val2;
+        else if(k2.indexOf("פנסיה")>-1)p.pension=val2;
+        else if(k2.indexOf("הלוואה")>-1||k2.indexOf("עמלות")>-1)p.loans=(p.loans||0)+val2;
+      }
+    }
+    save();
+  }
+  renderWizard();
+};
+
+function createYearMonths(year){
+  var p=state.profile;
+  var totalFixed=(p.rent||0)+(p.bills||0)+(p.insurance||0)+(p.pension||0)+(p.loans||0);
+  for(var m=1;m<=12;m++){
+    var mk=monthKey(year,m);
+    if(!state.months[mk]){
+      state.months[mk]={
+        income:(p.salary||0)+(p.extraIncome||0),
+        fixed:totalFixed,
+        shopping:0,
+        savings:p.savingsGoal||0,
+        detail:{
+          rent:p.rent||0,bills:p.bills||0,electric:0,water:0,gas:0,internet:0,phone:0,
+          insurance:p.insurance||0,car_insurance:0,
+          pension:p.pension||0,loans:p.loans||0,
+          supermarket:0,restaurant:0,delivery:0,
+          fuel:0,parking:0,transport:0,car_maint:0,tolls:0,
+          clothing:0,electronics:0,health:0,kids:0,entertainment:0,
+          extraIncome:p.extraIncome||0
+        }
+      };
+    }
+  }
+}
+
+function getYears(){
+  var years={};
+  for(var k in state.months){var y=parseInt(k.split("-")[0],10);years[y]=true}
+  var arr=[];for(var yy in years){arr.push(parseInt(yy,10))}
+  arr.sort();return arr;
+}
+
+function getMonthKeysForYear(year){
+  var keys=[];
+  for(var m=1;m<=12;m++){
+    var mk=monthKey(year,m);
+    if(state.months[mk])keys.push(mk);
+  }
+  return keys;
+}
+
+window.setYear=function(y){
+  state.selYear=y;
+  createYearMonths(y);
+  state.sel=monthKey(y,1);
+  save();render();
+};
+
+window.addNextYear=function(){
+  var years=getYears();
+  var maxY=years.length>0?years[years.length-1]:new Date().getFullYear();
+  var nextY=maxY+1;
+  createYearMonths(nextY);
+  state.selYear=nextY;
+  state.sel=monthKey(nextY,1);
+  save();render();
+};
+
+window.addMonthPrompt=function(){addNextYear()};
+
+window.delMonth=function(k){
+  var keys=getAllMonthKeys();
+  if(keys.length<=1)return;
+  delete state.months[k];
+  keys=getAllMonthKeys();
+  state.sel=keys[keys.length-1];
+  save();render();
+};
+
+window.updField=function(mk,field,val){
+  if(!state.months[mk])return;
+  state.months[mk][field]=prs(val);
+  save();render();
+};
+
+window.updDetail=function(mk,field,val){
+  if(!state.months[mk])return;
+  if(!state.months[mk].detail)state.months[mk].detail={};
+  state.months[mk].detail[field]=prs(val);
+  var d=state.months[mk].detail;
+  state.months[mk].fixed=(d.rent||0)+(d.bills||0)+(d.electric||0)+(d.water||0)+(d.gas||0)+(d.internet||0)+(d.phone||0)+(d.insurance||0)+(d.pension||0)+(d.loans||0)+(d.car_insurance||0);
+  state.months[mk].shopping=(d.supermarket||0)+(d.restaurant||0)+(d.delivery||0)+(d.fuel||0)+(d.parking||0)+(d.transport||0)+(d.car_maint||0)+(d.tolls||0)+(d.clothing||0)+(d.electronics||0)+(d.health||0)+(d.kids||0)+(d.entertainment||0);
+  state.months[mk].income=(state.profile.salary||0)+(d.extraIncome||0);
+  save();render();
+};
+
+window.updGoal=function(i,key,val){state.goals[i][key]=prs(val);save();render()};
+window.addGoal=function(){
+  var ic=["🎯","⭐","🏆","💰","🚀"];var co=["#34d399","#f472b6","#fb923c","#22d3ee","#a78bfa"];
+  var x=state.goals.length;
+  state.goals.push({name:"יעד חדש",current:0,target:10000,color:co[x%co.length],icon:ic[x%ic.length]});
+  save();render();
+};
+
+window.selectMonth=function(k){state.sel=k;state.selYear=parseInt(k.split("-")[0],10);render();scrollToMonth()};
+window.setView=function(v){state.view=v;render();renderNav();window.scrollTo(0,0)};
+window.resetAll=function(){
+  if(!confirm("למחוק את כל הנתונים ולהתחיל מחדש?"))return;
+  try{localStorage.removeItem(STORE_KEY)}catch(e){}
+  state={setupDone:false,wizStep:0,profile:{salary:0,extraIncome:0,rent:0,bills:0,insurance:0,pension:0,loans:0,savingsGoal:0},goals:[],months:{},sel:null,view:"dashboard"};
+  renderWizard();
+};
+
+function scrollToMonth(){
+  var el=document.getElementById("mt-"+state.sel);
+  if(el)el.scrollIntoView({behavior:"smooth",inline:"center",block:"nearest"});
+}
+
+function renderNav(){
+  var tabs=[{id:"dashboard",icon:"📊",label:"סקירה"},{id:"update",icon:"📝",label:"עדכון חודשי"},{id:"goals",icon:"🎯",label:"יעדים"},{id:"settings",icon:"⚙️",label:"הגדרות"}];
+  var h="";
+  for(var i=0;i<tabs.length;i++){
+    var t=tabs[i];
+    h+='<button class="bni'+(state.view===t.id?' on':'')+'" onclick="setView(\''+t.id+'\')">';
+    h+='<span class="bi">'+t.icon+'</span><span class="bl">'+t.label+'</span></button>';
+  }
+  document.getElementById("bnav").innerHTML=h;
+}
+
+function render(){
+  if(!state.setupDone){renderWizard();return}
+
+  var keys=getAllMonthKeys();
+  if(keys.length===0){
+    if(!state.selYear)state.selYear=new Date().getFullYear();
+    createYearMonths(state.selYear);
+    keys=getAllMonthKeys();
+  }
+  if(keys.length===0){
+    var cy=new Date().getFullYear();
+    for(var mm=1;mm<=12;mm++){
+      var mmk=monthKey(cy,mm);
+      state.months[mmk]={income:0,fixed:0,shopping:0,savings:0,detail:{rent:0,bills:0,electric:0,water:0,gas:0,internet:0,phone:0,insurance:0,car_insurance:0,pension:0,loans:0,supermarket:0,restaurant:0,delivery:0,fuel:0,parking:0,transport:0,car_maint:0,tolls:0,clothing:0,electronics:0,health:0,kids:0,entertainment:0,extraIncome:0}};
+    }
+    keys=getAllMonthKeys();
+    state.selYear=cy;
+  }
+  if(!state.sel||!state.months[state.sel])state.sel=keys[keys.length-1];
+  if(!state.selYear)state.selYear=parseInt((state.sel||curMonthKey()).split("-")[0],10);
+  var mk=state.sel;
+  var cur=state.months[mk];
+  if(!cur){cur={income:0,fixed:0,shopping:0,savings:0,detail:{rent:0,bills:0,electric:0,water:0,gas:0,internet:0,phone:0,insurance:0,car_insurance:0,pension:0,loans:0,supermarket:0,restaurant:0,delivery:0,fuel:0,parking:0,transport:0,car_maint:0,tolls:0,clothing:0,electronics:0,health:0,kids:0,entertainment:0,extraIncome:0}};state.months[mk]=cur}
+  save();
+
+  var totalExp=cur.fixed+cur.shopping;
+  var balance=cur.income-totalExp-cur.savings;
+  var prevKey=null;
+  var idx=-1;
+  for(var ki=0;ki<keys.length;ki++){if(keys[ki]===mk){idx=ki;break}}
+  if(idx>0)prevKey=keys[idx-1];
+  var prev=prevKey?state.months[prevKey]:null;
+  var incDiff=prev?cur.income-prev.income:0;
+  var expDiff=prev?totalExp-(prev.fixed+prev.shopping):0;
+
+  var h="";
+
+  h+='<div class="hdr"><h1>💰 לוח בקרה פיננסי</h1>';
+  h+='<div class="sub">'+monthLabel(mk)+' · נשמר אוטומטית</div></div>';
+
+  var years=getYears();
+  var curYear=state.selYear||parseInt(mk.split("-")[0],10);
+  var thisYear=new Date().getFullYear();
+  var maxExisting=years.length>0?years[years.length-1]:thisYear;
+  var maxYear=Math.max(maxExisting,thisYear)+3;
+  var allYears=[];
+  if(years.length>0){for(var ay=years[0];ay<=maxYear;ay++){allYears.push(ay)}}
+  else{for(var ay2=thisYear;ay2<=maxYear;ay2++){allYears.push(ay2)}}
+  h+='<div style="margin-bottom:12px">';
+  h+='<select id="yearSel" onchange="setYear(parseInt(this.value,10))" style="width:100%;padding:12px 16px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(22,24,40,.95);color:#e2e8f0;font-size:16px;font-weight:600;font-family:inherit;outline:none;text-align:center;cursor:pointer;direction:ltr">';
+  for(var yi=0;yi<allYears.length;yi++){
+    h+='<option value="'+allYears[yi]+'"'+(allYears[yi]===curYear?" selected":"")+'>'+allYears[yi]+'</option>';
+  }
+  h+='</select></div>';
+
+  var yearKeys=getMonthKeysForYear(curYear);
+  h+='<div class="mscroll"><div class="mtabs">';
+  for(var m=0;m<yearKeys.length;m++){
+    h+='<button id="mt-'+yearKeys[m]+'" class="mt'+(yearKeys[m]===mk?' on':'')+'" onclick="selectMonth(\''+yearKeys[m]+'\')">'+monthShort(yearKeys[m])+'</button>';
+  }
+  h+='</div></div>';
+
+  h+='<div class="'+(state.view!=="dashboard"?"hidden":"")+'">';
+
+  var cards=[
+    {icon:"💵",label:"הכנסות",value:cur.income,diff:incDiff,up:incDiff>=0,color:"#10b981",hasDiff:true},
+    {icon:"🧾",label:"הוצאות",value:totalExp,diff:expDiff,up:expDiff<=0,color:"#ef4444",hasDiff:true},
+    {icon:"🏦",label:"חיסכון",value:cur.savings,color:"#818cf8",pct:cur.income>0?((cur.savings/cur.income)*100).toFixed(0):"0"},
+    {icon:"💎",label:"יתרה",value:balance,color:"#f59e0b",isBal:true}
+  ];
+  h+='<div class="cgrid">';
+  for(var c=0;c<cards.length;c++){
+    var cd=cards[c];
+    h+='<div class="sc"><div class="bar" style="background:linear-gradient(90deg,'+cd.color+',transparent)"></div>';
+    h+='<div class="glow" style="background:'+cd.color+'"></div>';
+    h+='<span class="ico">'+cd.icon+'</span><div class="lbl">'+cd.label+'</div>';
+    h+='<div class="val">'+fmt(cd.value)+'</div>';
+    if(cd.hasDiff&&prev)h+='<span class="trnd '+(cd.up?"tu":"td")+'">'+(cd.up?"▲":"▼")+" "+fmt(Math.abs(cd.diff))+"</span>";
+    if(cd.pct!==undefined)h+='<span class="trnd tu">'+cd.pct+'% מההכנסה</span>';
+    if(cd.isBal)h+='<span class="trnd '+(balance>=0?"tu":"td")+'">'+(balance>=0?"תקין ✓":"חריגה ✗")+"</span>";
+    h+="</div>";
+  }
+  h+="</div>";
+
+  h+='<div class="pnl"><h3>📊 מגמה</h3><div class="chwrap"><canvas id="lc"></canvas></div>';
+  h+='<div class="leg"><span><span class="ldot" style="background:#10b981"></span> הכנסות</span>';
+  h+='<span><span class="ldot" style="background:#ef4444"></span> הוצאות</span>';
+  h+='<span><span class="ldot" style="background:#818cf8"></span> חיסכון</span></div></div>';
+
+  h+='<div class="pnl"><h3>🧮 פירוט — '+monthShort(mk)+'</h3>';
+  var det=cur.detail||{};
+
+  var detailsToShow=[];
+  if(det.rent){detailsToShow.push({icon:"🏠",name:"שכירות/משכנתא",amount:det.rent,color:"#fbbf24",bg:"rgba(251,191,36,.1)"})}
+  if(det.electric){detailsToShow.push({icon:"⚡",name:"חשמל",amount:det.electric,color:"#fb923c",bg:"rgba(251,146,60,.1)"})}
+  if(det.water){detailsToShow.push({icon:"💧",name:"מים",amount:det.water,color:"#fb923c",bg:"rgba(251,146,60,.1)"})}
+  if(det.gas){detailsToShow.push({icon:"🔥",name:"גז",amount:det.gas,color:"#fb923c",bg:"rgba(251,146,60,.1)"})}
+  if(det.internet){detailsToShow.push({icon:"📡",name:"אינטרנט",amount:det.internet,color:"#fb923c",bg:"rgba(251,146,60,.1)"})}
+  if(det.phone){detailsToShow.push({icon:"📱",name:"טלפון",amount:det.phone,color:"#fb923c",bg:"rgba(251,146,60,.1)"})}
+  if(det.insurance){detailsToShow.push({icon:"🛡️",name:"ביטוח",amount:det.insurance,color:"#22d3ee",bg:"rgba(34,211,238,.1)"})}
+  if(det.pension){detailsToShow.push({icon:"🏦",name:"פנסיה",amount:det.pension,color:"#a78bfa",bg:"rgba(167,139,250,.1)"})}
+  if(det.loans){detailsToShow.push({icon:"💳",name:"הלוואות",amount:det.loans,color:"#f472b6",bg:"rgba(244,114,182,.1)"})}
+  if(det.supermarket){detailsToShow.push({icon:"🛒",name:"סופרמרקט",amount:det.supermarket,color:"#ef4444",bg:"rgba(239,68,68,.1)"})}
+  if(det.restaurant){detailsToShow.push({icon:"🍽️",name:"מסעדה",amount:det.restaurant,color:"#ef4444",bg:"rgba(239,68,68,.1)"})}
+  if(det.delivery){detailsToShow.push({icon:"🛵",name:"משלוח",amount:det.delivery,color:"#ef4444",bg:"rgba(239,68,68,.1)"})}
+  if(det.fuel){detailsToShow.push({icon:"⛽",name:"דלק",amount:det.fuel,color:"#a78bfa",bg:"rgba(167,139,250,.1)"})}
+  if(det.parking){detailsToShow.push({icon:"🅿️",name:"חניה",amount:det.parking,color:"#a78bfa",bg:"rgba(167,139,250,.1)"})}
+  if(det.transport){detailsToShow.push({icon:"🚌",name:"תחבורה",amount:det.transport,color:"#a78bfa",bg:"rgba(167,139,250,.1)"})}
+  if(det.car_maint){detailsToShow.push({icon:"🔧",name:"טיפול רכב",amount:det.car_maint,color:"#a78bfa",bg:"rgba(167,139,250,.1)"})}
+  if(det.tolls){detailsToShow.push({icon:"🛣️",name:"אגרות",amount:det.tolls,color:"#a78bfa",bg:"rgba(167,139,250,.1)"})}
+  if(det.clothing){detailsToShow.push({icon:"👕",name:"ביגוד",amount:det.clothing,color:"#f472b6",bg:"rgba(244,114,182,.1)"})}
+  if(det.electronics){detailsToShow.push({icon:"💻",name:"אלקטרוניקה",amount:det.electronics,color:"#f472b6",bg:"rgba(244,114,182,.1)"})}
+  if(det.health){detailsToShow.push({icon:"🏥",name:"בריאות",amount:det.health,color:"#f472b6",bg:"rgba(244,114,182,.1)"})}
+  if(det.kids){detailsToShow.push({icon:"👶",name:"ילדים",amount:det.kids,color:"#f472b6",bg:"rgba(244,114,182,.1)"})}
+  if(det.entertainment){detailsToShow.push({icon:"🎭",name:"בילוי",amount:det.entertainment,color:"#22d3ee",bg:"rgba(34,211,238,.1)"})}
+
+  for(var e=0;e<detailsToShow.length;e++){
+    var ex=detailsToShow[e];
+    var ep=cur.income>0?((ex.amount/cur.income)*100).toFixed(1):"0";
+    h+='<div class="ei"><div class="eic" style="background:'+ex.bg+'">'+ex.icon+'</div>';
+    h+='<div class="einf"><div class="nm">'+ex.name+'</div><div class="pc">'+ep+'% מההכנסה</div>';
+    h+='<div class="ebar"><div class="efill" style="width:'+Math.min(parseFloat(ep),100)+'%;background:'+ex.color+'"></div></div></div>';
+    h+='<div class="eamt" style="color:'+ex.color+'">'+fmt(ex.amount)+'</div></div>';
+  }
+  h+='<div class="totrow"><span style="font-size:13px;color:#94a3b8;font-weight:600">סה״כ הוצאות</span>';
+  h+='<span style="font-size:18px;font-weight:700;color:#ef4444">'+fmt(totalExp)+'</span></div>';
+  var svP=cur.income>0?((cur.savings/cur.income)*100).toFixed(0):"0";
+  h+='<div class="sbox"><div style="display:flex;justify-content:space-between;align-items:center">';
+  h+='<span style="font-size:12px;color:#34d399;font-weight:500">יחס חיסכון</span>';
+  h+='<span style="font-size:20px;font-weight:700;color:#34d399">'+svP+'%</span></div>';
+  h+='<div class="sbar"><div class="sfill" style="width:'+svP+'%"></div></div></div></div>';
+
+  if(state.goals.length>0){
+    h+='<div class="pnl"><h3>🎯 יעדים</h3><div class="ggrid">';
+    for(var g=0;g<state.goals.length;g++){
+      var gg=state.goals[g];
+      var gp=gg.target>0?(Math.round((gg.current/gg.target)*100)):0;
+      h+='<div class="gi"><div class="ghdr"><span class="gnm">'+gg.icon+" "+gg.name+'</span><span class="gamt">'+fmt(gg.current)+' / '+fmt(gg.target)+'</span></div>';
+      h+='<div class="gbar"><div class="gfill" style="width:'+gp+'%;background:'+gg.color+'"></div></div>';
+      h+='<div class="gpct" style="color:'+gg.color+'">'+gp+'%</div></div>';
+    }
+    h+='</div></div>';
+  }
+
+  h+='</div>';
+
+  // ========== UPDATE VIEW ==========
+  h+='<div class="'+(state.view!=="update"?"hidden":"")+'">';
+  h+='<div class="upload-zone" onclick="document.getElementById(\'updateFileInput\').click()" ondrop="handleUpdateDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" style="margin-bottom:18px">';
+  h+='<input type="file" id="updateFileInput" accept=".csv,.xlsx,.xls,.jpg,.jpeg,.png,.webp,.pdf" onchange="handleUpdateFile(this)" style="display:none">';
+  h+='<div class="uz-icon">📎</div>';
+  h+='<div class="uz-title">העלה דוח בנק או קבלה</div>';
+  h+='<div class="uz-sub">CSV, Excel, PDF, או תמונה</div></div>';
+
+  if(window._updateParsed){
+    var up=window._updateParsed;
+    h+='<div class="parsed-box"><h4>'+up.detectedType.icon+" "+up.detectedType.label+'</h4>';
+    if(up.transactions.length>0){
+      h+='<div class="tx-list">';
+      for(var tx=0;tx<Math.min(up.transactions.length,10);tx++){
+        var t=up.transactions[tx];
+        h+='<div class="tx-item"><div class="tx-cat" style="background:rgba(99,102,241,.1);color:#818cf8">💱</div>';
+        h+='<div class="tx-info"><div class="tx-desc">'+t.desc+'</div><div class="tx-date">'+t.cat+'</div></div>';
+        h+='<div class="tx-amt" style="color:#f87171">'+fmt(t.amount)+'</div></div>';
+      }
+      h+='</div>';
+    }
+    h+='<div class="parsed-actions" style="margin-top:14px"><button class="btn-secondary" onclick="applyUpdateParsed()" style="font-size:13px">החל לחודש זה</button></div></div>';
+  }
+
+  h+='<div class="pnl" style="margin-top:20px"><h3>📝 עדכון יד</h3>';
+  var updateCard=state.months[mk];
+  h+='<div class="ecard"><div class="ecard-hdr"><span class="ecard-month">'+monthLabel(mk)+'</span></div>';
+  h+='<div class="ecard-grid">';
+  h+='<div class="ecard-field"><label class="ecard-label">💵 הכנסה</label><input class="einput inc" type="text" inputmode="numeric" value="'+updateCard.income+'" onchange="updField(\''+mk+'\',\'income\',this.value)"></div>';
+  h+='<div class="ecard-field"><label class="ecard-label">🧾 הוצאות קבועות</label><input class="einput exp" type="text" inputmode="numeric" value="'+updateCard.fixed+'" onchange="updField(\''+mk+'\',\'fixed\',this.value)"></div>';
+  h+='</div>';
+  h+='<div class="ecard-grid" style="margin-top:10px">';
+  h+='<div class="ecard-field"><label class="ecard-label">🛒 קניות ואוכל</label><input class="einput exp" type="text" inputmode="numeric" value="'+updateCard.shopping+'" onchange="updField(\''+mk+'\',\'shopping\',this.value)"></div>';
+  h+='<div class="ecard-field"><label class="ecard-label">🏦 חיסכון</label><input class="einput sav" type="text" inputmode="numeric" value="'+updateCard.savings+'" onchange="updField(\''+mk+'\',\'savings\',this.value)"></div>';
+  h+='</div>';
+  h+='</div>';
+
+  h+='<div style="margin-top:20px"><h4 style="color:#94a3b8;font-size:13px;margin-bottom:12px">פירוט קטגוריות</h4>';
+  var detOptions=[
+    {key:"rent",icon:"🏠",label:"שכירות/משכנתא"},
+    {key:"electric",icon:"⚡",label:"חשמל"},
+    {key:"water",icon:"💧",label:"מים"},
+    {key:"gas",icon:"🔥",label:"גז"},
+    {key:"internet",icon:"📡",label:"אינטרנט"},
+    {key:"phone",icon:"📱",label:"טלפון"},
+    {key:"insurance",icon:"🛡️",label:"ביטוח"},
+    {key:"car_insurance",icon:"🚗",label:"ביטוח רכב"},
+    {key:"pension",icon:"🏦",label:"פנסיה"},
+    {key:"loans",icon:"💳",label:"הלוואות"},
+    {key:"supermarket",icon:"🛒",label:"סופרמרקט"},
+    {key:"restaurant",icon:"🍽️",label:"מסעדה"},
+    {key:"delivery",icon:"🛵",label:"משלוח"},
+    {key:"fuel",icon:"⛽",label:"דלק"},
+    {key:"parking",icon:"🅿️",label:"חניה"},
+    {key:"transport",icon:"🚌",label:"תחבורה"},
+    {key:"car_maint",icon:"🔧",label:"טיפול רכב"},
+    {key:"tolls",icon:"🛣️",label:"אגרות"},
+    {key:"clothing",icon:"👕",label:"ביגוד"},
+    {key:"electronics",icon:"💻",label:"אלקטרוניקה"},
+    {key:"health",icon:"🏥",label:"בריאות"},
+    {key:"kids",icon:"👶",label:"ילדים"},
+    {key:"entertainment",icon:"🎭",label:"בילוי"},
+    {key:"extraIncome",icon:"💰",label:"הכנסות נוספות"}
+  ];
+  h+='<div class="detail-grid">';
+  for(var do_i=0;do_i<detOptions.length;do_i++){
+    var dopt=detOptions[do_i];
+    h+='<div class="detail-section">';
+    h+='<h4>'+dopt.icon+" "+dopt.label+'</h4>';
+    h+='<input class="einput" type="text" inputmode="numeric" value="'+(det[dopt.key]||0)+'" placeholder="0" onchange="updDetail(\''+mk+'\',\''+dopt.key+'\',this.value)" style="font-size:13px;padding:8px 10px">';
+    h+='</div>';
+  }
+  h+='</div></div>';
+  h+='</div>';
+  h+='</div>';
+
+  // ========== GOALS VIEW ==========
+  h+='<div class="'+(state.view!=="goals"?"hidden":"")+'">';
+  h+='<div class="pnl"><h3>🎯 יעדי חיסכון</h3>';
+  h+='<div class="ggrid">';
+  for(var gg_i=0;gg_i<state.goals.length;gg_i++){
+    var ggg=state.goals[gg_i];
+    var gggp=ggg.target>0?Math.round((ggg.current/ggg.target)*100):0;
+    h+='<div class="gi" style="padding:20px 0;border-bottom:1px solid rgba(255,255,255,.03)">';
+    h+='<div class="ghdr"><span class="gnm">'+ggg.icon+" "+ggg.name+'</span></div>';
+    h+='<div class="gedit">';
+    h+='<input class="ginput" type="text" inputmode="numeric" placeholder="עכשיו" value="'+ggg.current+'" onchange="updGoal('+gg_i+',\'current\',this.value)">';
+    h+='<span class="glbl">/</span>';
+    h+='<input class="ginput" type="text" inputmode="numeric" placeholder="יעד" value="'+ggg.target+'" onchange="updGoal('+gg_i+',\'target\',this.value)">';
+    h+='<span class="glbl">'+gggp+'%</span>';
+    h+='</div>';
+    h+='<div class="gbar" style="margin-top:10px"><div class="gfill" style="width:'+gggp+'%;background:'+ggg.color+'"></div></div>';
+    h+='</div>';
+  }
+  h+='</div>';
+  h+='<button class="add-btn" onclick="addGoal()"><span style="font-size:16px">+</span> יעד חדש</button>';
+  h+='</div></div>';
+
+  // ========== SETTINGS VIEW ==========
+  h+='<div class="'+(state.view!=="settings"?"hidden":"")+'">';
+  h+='<div class="pnl"><h3>⚙️ הגדרות</h3>';
+  h+='<div style="margin-bottom:16px">';
+  h+='<div style="font-size:12px;color:#94a3b8;margin-bottom:8px">הפרופיל הנוכחי</div>';
+  h+='<div style="font-size:13px;color:#cbd5e1">';
+  h+='💼 משכורת: '+fmt(state.profile.salary)+'<br>';
+  h+='💰 הוצאות קבועות: '+fmt((state.profile.rent||0)+(state.profile.bills||0)+(state.profile.insurance||0)+(state.profile.pension||0)+(state.profile.loans||0));
+  h+='</div></div>';
+  h+='<button class="reset-btn" onclick="resetAll()">🔄 איפוס ודרוס מחדש</button>';
+  h+='</div></div>';
+
+  h+='</div>';
+
+  document.getElementById("app").innerHTML=h;
+
+  if(state.view==="dashboard"&&window.Chart){
+    setTimeout(function(){
+      var monthsToShow=getMonthKeysForYear(state.selYear);
+      var labels=monthsToShow.map(function(k){return monthShort(k)});
+      var incomeData=[];
+      var expenseData=[];
+      var savingsData=[];
+      for(var md=0;md<monthsToShow.length;md++){
+        var mdata=state.months[monthsToShow[md]];
+        if(mdata){
+          incomeData.push(mdata.income);
+          expenseData.push(mdata.fixed+mdata.shopping);
+          savingsData.push(mdata.savings);
+        }
+      }
+      var ctx=document.getElementById("lc");
+      if(ctx){
+        new Chart(ctx,{type:"line",data:{labels:labels,datasets:[
+          {label:"הכנסות",borderColor:"#10b981",backgroundColor:"rgba(16,185,129,.1)",data:incomeData,tension:.3,fill:true},
+          {label:"הוצאות",borderColor:"#ef4444",backgroundColor:"rgba(239,68,68,.1)",data:expenseData,tension:.3,fill:true},
+          {label:"חיסכון",borderColor:"#818cf8",backgroundColor:"rgba(129,140,248,.1)",data:savingsData,tension:.3,fill:true}
+        ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:"#64748b"},grid:{color:"rgba(255,255,255,.05)"}},x:{ticks:{color:"#64748b"},grid:{color:"rgba(255,255,255,.05)"}}}}});
+      }
+    },100);
+  }
+}
+
+window.handleUpdateFile=function(input){
+  if(!input.files||input.files.length===0)return;
+  var file=input.files[0];
+
+  window.handleFileUpload(file,function(result){
+    if(result.error){
+      alert("שגיאה: "+result.error);
+      return;
+    }
+    window._updateParsed=result;
+    render();
+  });
+};
+
+window.handleUpdateDrop=function(e){
+  e.preventDefault();
+  e.stopPropagation();
+  if(e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files.length>0){
+    window.handleUpdateFile({files:e.dataTransfer.files});
+  }
+};
+
+// Category name to detail key mapping
+var CAT_TO_DETAIL={
+  "משכורת":"extraIncome","פרילנס":"extraIncome","הכנסה משכירות":"extraIncome","קצבה/מענק":"extraIncome","דיבידנד/ריבית":"extraIncome",
+  "שכירות/משכנתא":"rent","משכנתא":"rent","ארנונה":"bills","ועד בית":"bills",
+  "חשמל":"electric","מים":"water","גז":"gas","אינטרנט":"internet","טלפון סלולרי":"phone",
+  "ביטוח בריאות":"insurance","ביטוח רכב":"car_insurance","ביטוח חיים":"insurance","ביטוח דירה":"insurance","ביטוחים":"insurance",
+  "פנסיה":"pension","הלוואה":"loans","עמלות בנק":"loans",
+  "סופרמרקט":"supermarket","מסעדה/קפה":"restaurant","משלוח אוכל":"delivery",
+  "דלק":"fuel","חניה":"parking","תחבורה ציבורית":"transport","טיפול רכב":"car_maint","אגרות דרך":"tolls",
+  "ביגוד":"clothing","אלקטרוניקה":"electronics","בית ורהיטים":"electronics","בריאות":"health",
+  "ילדים":"kids","חיות מחמד":"kids",
+  "סטרימינג":"entertainment","חדר כושר":"entertainment","בילוי":"entertainment","חינוך":"kids",
+  "העברה":"entertainment","חיסכון":null,"השקעה":null
+};
+
+window.applyUpdateParsed=function(){
+  var parsed=window._updateParsed;
+  if(!parsed||!parsed.transactions)return;
+
+  var mk=state.sel;
+  if(!state.months[mk])return;
+  // Reset detail to zero before applying document data
+  state.months[mk].detail={rent:0,bills:0,electric:0,water:0,gas:0,internet:0,phone:0,insurance:0,car_insurance:0,pension:0,loans:0,supermarket:0,restaurant:0,delivery:0,fuel:0,parking:0,transport:0,car_maint:0,tolls:0,clothing:0,electronics:0,health:0,kids:0,entertainment:0,extraIncome:0};
+  var det=state.months[mk].detail;
+
+  var incomeTotal=0;
+  var savingsTotal=0;
+  for(var tx=0;tx<parsed.transactions.length;tx++){
+    var t=parsed.transactions[tx];
+    var catName=t.cat||"";
+    var detKey=CAT_TO_DETAIL[catName];
+
+    if(t.isIncome){
+      incomeTotal+=t.amount;
+    }else if(t.catObj&&t.catObj.type==="savings"){
+      savingsTotal+=t.amount;
+    }else if(detKey){
+      det[detKey]=(det[detKey]||0)+Math.round(t.amount);
+    }
+  }
+
+  // Update income if found
+  if(incomeTotal>0)state.months[mk].income=Math.round(incomeTotal);
+  // Update savings from קה"ש / השקעות if found
+  if(savingsTotal>0)state.months[mk].savings=Math.round(savingsTotal);
+
+  // Recalc totals from detail
+  state.months[mk].fixed=(det.rent||0)+(det.electric||0)+(det.water||0)+(det.gas||0)+(det.internet||0)+(det.phone||0)+(det.insurance||0)+(det.car_insurance||0)+(det.pension||0)+(det.loans||0)+(det.bills||0);
+  state.months[mk].shopping=(det.supermarket||0)+(det.restaurant||0)+(det.delivery||0)+(det.fuel||0)+(det.parking||0)+(det.transport||0)+(det.car_maint||0)+(det.tolls||0)+(det.clothing||0)+(det.electronics||0)+(det.health||0)+(det.kids||0)+(det.entertainment||0);
+
+  window._updateParsed=null;
+  save();
+  render();
+};
+
+/* ===== BOOT ===== */
+var booted=false;
+function safeBoot(){
+  if(booted)return;
+  booted=true;
+  try{
+    load();
+  }catch(e){
+    state={setupDone:false,wizStep:0,profile:{salary:0,extraIncome:0,rent:0,bills:0,insurance:0,pension:0,loans:0,savingsGoal:0},goals:[],months:{},sel:null,view:"dashboard"};
+    try{localStorage.removeItem(STORE_KEY)}catch(x){}
+  }
+  try{
+    if(state.setupDone){render();renderNav()}
+    else{renderWizard()}
+  }catch(e){
+    document.getElementById("app").innerHTML='<div style="text-align:center;padding:60px 20px"><h2 style="color:#f87171;font-size:20px">שגיאה בטעינה</h2><p style="color:#94a3b8;margin:12px 0;font-size:13px">'+String(e.message||e)+'</p><button onclick="try{localStorage.removeItem(\'fin_v6\')}catch(x){}location.reload()" style="padding:12px 24px;border-radius:12px;border:none;background:#6366f1;color:#fff;font-size:16px;cursor:pointer;font-family:inherit;margin-top:12px">איפוס והפעלה מחדש</button></div>';
+  }
+}
+
+// Boot IMMEDIATELY
+safeBoot();
+
+// Load Chart.js in background
+(function(){
+  if(typeof Chart!=="undefined")return;
+  try{
+    var s=document.createElement("script");
+    s.src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js";
+    s.onload=function(){try{if(state.setupDone&&state.view==="dashboard")render()}catch(e){}};
+    document.head.appendChild(s);
+  }catch(e){}
+})();
+
+// Set PDF.js worker
+try{
+  if(typeof pdfjsLib!=="undefined"){
+    pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  }else{
+    var checkPdf=setInterval(function(){
+      if(typeof pdfjsLib!=="undefined"){
+        pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+        clearInterval(checkPdf);
+      }
+    },1000);
+    setTimeout(function(){clearInterval(checkPdf)},15000);
+  }
+}catch(e){}
+
+})();
+</script>
+</body>
+</html>
